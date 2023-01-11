@@ -2,12 +2,12 @@ import numpy as np
 from kernels import kernel_exp, kernel_SE
 from scipy.linalg import solve_triangular
 
-
+# define the minimizer for GPR-hyperparameters
 def minimizer(X, Y, ker, prob): 
     """
     Input:
-        X: array of Points dim=(121,2).
-        Y: observations at Points dim=(121,1).
+        X: array of Points dim=(Nz,2).
+        Y: observations at Points dim=(Nz,1).
         ker: type of kernel (0 or 1)
         prob: number of problem (1 or 2)
                
@@ -32,8 +32,8 @@ def minimizer(X, Y, ker, prob):
                    
         Output:
             logL: log_likelihood wrt theta
-
         """
+        
         if (prob == 2 and ker == 1):
             K = kernel(X, X, l1=theta[0], l2=theta[1], var=theta[2]) + theta[3] * np.eye(len(X))
         else:            

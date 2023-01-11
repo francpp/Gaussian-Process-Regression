@@ -10,18 +10,22 @@ np.random.seed(12345)
 
 
 # load files and extract values
-# Note that all the dimensions in the docstring are relative to the second case study
 
 perm = np.load('true_perm.npy')
 
+# define the coordinates of available observations
+
 Coord1 = (np.array([np.linspace(15, 95, 5), np.linspace(10, 50, 5)]).T).astype(int)
 Coord2 = (np.array([np.linspace(5, 105, 11), np.linspace(5, 55, 11)]).T).astype(int)
+
+# define the domains
 
 Mesh_total, Points_total = create_Domain2(perm)
 Mesh1, Values1, Points1 = create_Dataset(perm, Coord1)
 Mesh2, Values2, Points2 = create_Dataset(perm, Coord2)
 
-# Minimize the log-likelihood for Points1
+
+# minimize the log-likelihood for Points1
 
 res1_exp = minimize(minimizer(Points1, Values1, ker = 0, prob=2), 
                 x0 = [1, 0.1, 0.1], 
@@ -33,7 +37,7 @@ res1_se = minimize(minimizer(Points1, Values1, ker = 1, prob=2),
                  bounds=((1e-10, None), (1e-10, None), (1e-10, None),(1e-10, None)),
                  method='L-BFGS-B')
 
-# Minimize the log-likelihood for Points2
+# minimize the log-likelihood for Points2
 
 res2_exp = minimize(minimizer(Points2, Values2, ker = 0, prob=2), 
                 x0 = [1, 0.1, 0.1], 
@@ -68,19 +72,17 @@ for KER in range(2):
         var_perm = np.diag(cov_perm) 
         err = np.mean(np.abs(mean_perm-perm.flatten()))
         print('err w.r.t true_perm =', err)
-        
-        
-        # Plot covariance matrix (HUGE!)
-        #plot_cov(K_Y)
-        #plot_cov(cov_perm)
+               
+        # Plot covariance matrix (computational heavy!)
+        # plot_cov(K_Y)
+        # plot_cov(cov_perm)
         
         # Plot true perm, mean_pred, var_perm
         plot_compare_three(perm, mean_perm, var_perm, Points)
         
         # Generate gaussian processes with Circular Embedding
-        perm_cond = conditional(mean_perm, cov_perm, K_ZY, K_Z, K_Y, Points, Values, n_process = 1000)
+        perm_cond = conditional(K_ZY, K_Z, K_Y, Points, Values, n_process = 1000)
         
-        # Plotta due processi a caso
         if KER==0 and PTS==1:
             perm_cond1 = perm_cond[:,0]
         elif KER==0 and PTS==2:
@@ -91,7 +93,7 @@ for KER in range(2):
             perm_cond4 = perm_cond[:,0]
                 
         
-        # MONTE CARLO and VARIANCE REDUCTION
+        # Evaluate the expected value of psi with Monte Carlo and Antithetic Variables
         
         Critical = (np.array([np.ones(4)*85, np.array([35, 40, 45, 50])]).T).astype(int)
         indexes = np.array([60*Critical[0,0] + i for i in Critical[:,1]])
@@ -117,4 +119,6 @@ for KER in range(2):
         print('mu_MC=', means_MC[-1], '+-', stds_MC[-1]*1.96/np.sqrt(Ns_all[-1]))
         print('mu_AV=', means_AV[-1], '+-', stds_AV[-1]*1.96/np.sqrt(Ns_all[-1]/2))
         
+# Plot a process for each case study
+
 plot_CE(perm_cond1, perm_cond2, perm_cond3, perm_cond4, Points1, Points2)

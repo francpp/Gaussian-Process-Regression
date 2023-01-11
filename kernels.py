@@ -1,5 +1,6 @@
 import numpy as np
 
+# define euclidean-distance between m d-dim points
 def dist_2(X1, X2):
     """
     Input:
@@ -23,6 +24,7 @@ def dist_2(X1, X2):
     distances = np.sqrt(np.sum((X1[rows, :] - X2[cols, :])**2, axis=2))
     return distances
 
+# define weighted-distance between m d-dim points
 def dist_w(X1, X2, l):
     """
     Input:
@@ -42,17 +44,13 @@ def dist_w(X1, X2, l):
         X2 = X2.reshape(-1, 1) 
         
     assert X1.shape[1] == X2.shape[1]
-    
-    #print(type(l))
-    #if (type(l)!=int and type(l)!=float and type(l)!= float64):    
-    #    assert l.shape[0] == X1.shape[1]
-    
+        
     rows, cols = np.indices((X1.shape[0], X2.shape[0]))
     distances = np.sum(((X1[rows, :] - X2[cols, :])/l)**2, axis=2)
     return distances
 
-
-def kernel_exp(X1, X2, l=1.0, var=1.0):
+# define exponential kernel
+def kernel_exp(X1, X2, l, var):
     """
     Exponential (Exp) kernel.
     
@@ -68,7 +66,8 @@ def kernel_exp(X1, X2, l=1.0, var=1.0):
     distances = dist_2(X1, X2)
     return var * np.exp(-distances/l)
 
-def kernel_SE(X1, X2, l=1.0, var=1.0):
+# define square exponential kernel
+def kernel_SE(X1, X2, l, var):
     """
     Squared Exponential (SE) kernel.
     
@@ -84,6 +83,7 @@ def kernel_SE(X1, X2, l=1.0, var=1.0):
     distances = dist_w(X1, X2, l)
     return var * np.exp(-0.5*distances)
 
+# evaluate kernels given the dataset and hyperparameters
 def evaluate_kernels(Z, Y, kernel, l, var):
     """
                  ___Nz_____Ny___

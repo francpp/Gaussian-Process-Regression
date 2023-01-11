@@ -1,6 +1,7 @@
 import numpy as np
 from kernels import kernel_exp, kernel_SE
 
+# create Dataset for task 1
 def create_Domain1(Nz, f_tilde, Ny):
     """
     Input:
@@ -21,6 +22,7 @@ def create_Domain1(Nz, f_tilde, Ny):
     
     return Z, f_tilde_Z, Y
 
+# create datasets for task2
 def create_Domain2(perm):
     """
     Input:
@@ -57,6 +59,7 @@ def create_Dataset(perm, Coord):
     
     return Mesh, Values, Points
 
+# define the case study for task1
 def case_study1(KER, PTS, Z0, f_tilde_Z0, Z1, f_tilde_Z1, res_exp0, res_SE0, res_exp1, res_SE1):
     """
     Input:
@@ -103,7 +106,7 @@ def case_study1(KER, PTS, Z0, f_tilde_Z0, Z1, f_tilde_Z1, res_exp0, res_SE0, res
     return kernel, Z, f_tilde_Z, l_opt, var_opt, s_2_opt
 
 
-
+# define the case study for task2
 def case_study2(KER, PTS, Points1, Values1, Points2, Values2, res1, res1_, res2, res2_):
     """
     Input:

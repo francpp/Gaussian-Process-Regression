@@ -2,6 +2,7 @@ import numpy as np
 from processes import g_process
 from scipy.stats import norm
 
+# define the function whose expected value we want to calculate
 def csi(ip):
     """
     Input:
@@ -9,14 +10,14 @@ def csi(ip):
 
     Output:      
         cnt : csi evaluated for each process, dim = (Np,)
-
     """
+    
     cnt = np.count_nonzero(ip>8, axis=0)
     cnt[cnt>0]=1
     
     return cnt
 
-
+# define the Crude Monte Carlo method
 def MC(mu, sigma, N):
     """
     Input:
@@ -26,7 +27,7 @@ def MC(mu, sigma, N):
 
     Output:
         mean_est : float, estimated value of E[csi(ip)] with crude Monte Carlo
-        var_est : float, estimated value of Var[csi(ip)] with Crude Monte Carlo
+        std_est : float, estimated value of Std[csi(ip)] with Crude Monte Carlo
     """
     
     mu = mu.reshape(4, 1)
@@ -38,8 +39,22 @@ def MC(mu, sigma, N):
     
     return mean_est, std_est
 
+
+# define the 2stages Monte Carlo method
 def MC_2stages(mu, sigma, tol, N0 = 100000):
-    # per ker_exp
+    """
+    Input:
+        mu : mean of gaussian process, dim = (4,1)
+        sigma : variance of gaussian process, dim = (4,4)
+        tol: tolerance for confidence interval
+        N0 : initial number of gaussian processes
+
+    Output:
+        N: final number of gaussian processes
+        mean_est : float, estimated value of E[csi(ip)] with crude Monte Carlo
+        std_est : float, estimated value of Std[csi(ip)] with Crude Monte Carlo
+    """
+
     alpha = 0.05
     c = norm.ppf(1-alpha/2) #1.96
     N_old = N0
@@ -54,23 +69,11 @@ def MC_2stages(mu, sigma, tol, N0 = 100000):
         if std_est_ != 0:            
             N = int((c*std_est_/tol)**2)
         mean_est, std_est = MC(mu, sigma, N)
+        
     return N, mean_est, std_est
 
-def MC_seq(mu, sigma, tol):
-    # per ker_SE
-    alpha = 0.05
-    c = norm.ppf(1-alpha/2) #1.96
-    N = 1000000
-    mean_est, std_est = MC(mu, sigma, N)
-    while c*std_est/np.sqrt(N) > tol:
-        mean_old = mean_est
-        std_old = std_est
-        Z = csi(g_process(mu.reshape(4,1), sigma))
-        mean_est = (mean_old*N+Z)/(N+1)
-        std_est = np.sqrt((N-1)/N*std_old**2+(Z-mean_old)**2/(N+1))
-        N = N+1
-    return N, mean_est, std_est
 
+# define the antithetic variables method
 def MC_AV(mu, sigma, N):
     """
     Input:
@@ -80,8 +83,7 @@ def MC_AV(mu, sigma, N):
 
     Output:
         mean_est : float, estimated value of E[csi(ip)] with antithetic variables
-        var_est : float, estimated value of Var[csi(ip)] with antithetic variables
-
+        std_est : float, estimated value of Std[csi(ip)] with antithetic variables
     """
 
     mu = mu.reshape(4, 1)
@@ -98,35 +100,4 @@ def MC_AV(mu, sigma, N):
     return mean_est, std_est
 
 
-def MC_IS(mu, sigma, N):
-    """
-    Input:
-        mu : mean of gaussian process, dim = (4,1)
-        sigma : variance of gaussian process, dim = (4,4)
-        N : number of gaussian processes
-
-    Output:
-        mean_est : float, estimated value of E[csi(ip)] with importance sampling
-        var_est : float, estimated value of Var[csi(ip)] with importance sampling
-
-    """
-
-    gauss_func = lambda x, m, s: np.exp(-0.5*np.sum((x-m)*np.linalg.solve(s,x-m), axis=0))
-    # perform sampling   
-    mu = mu.reshape(4,1)
-    mu_s = np.array([[8,8,8,8]]).reshape(4,1)
-    X = g_process(mu_s, sigma, n_process = N)
-    
-    g = gauss_func(X, mu_s, sigma)
-    f = gauss_func(X, mu, sigma)
-    likelihood_ratio = f/g
-    
-    Z = csi(X)
-    
-    est = Z*likelihood_ratio
-    
-    mean_est = np.mean(est)
-    var_est = np.var(est)
-    
-    return mean_est, var_est
 

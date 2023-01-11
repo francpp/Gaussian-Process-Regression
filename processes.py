@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.fftpack import fft2, ifft2
 
-
+# predict mean and covariance of the conditioned gaussian process
 def prediction(f, K_Z, K_Y, K_ZY, s_2):
     """
                  ___Nz_____Ny___
@@ -30,6 +30,7 @@ def prediction(f, K_Z, K_Y, K_ZY, s_2):
     
     return mu_pred, cov_pred
 
+# generate different gaussian processes
 def g_process(mean, sigma, n_process = 1):
     """
     Input:
@@ -48,15 +49,23 @@ def g_process(mean, sigma, n_process = 1):
     
     return proc
 
-# generate thanks to Circular Embedding
+
+# Circulant Embedding in 2D
 def build_P(sigma):
-    upper_left_P = np.empty((110,60))
+    """
+    Input:
+        sigma: covariance matrix dim=(6600,6600)
+
+    Output:
+        P: 2D-Circular matrix, dim=(119,219)
+    """
+    
+    upper_left_P = np.empty((60,110))
     for j in range(6600):
-        # switch 110 with 60
         delta_y = int(j/60)
         delta_x = int(j%60)
         
-        upper_left_P[delta_y, delta_x] = sigma[0,j]
+        upper_left_P[delta_x, delta_y] = sigma[0,j]
     
     upper_right_P = np.flip(upper_left_P[:,1:], axis=1)
     upper_P = np.c_[upper_left_P, upper_right_P]
@@ -67,64 +76,50 @@ def build_P(sigma):
     return P
 
 
-# Circulant Embedding in 2D
-def CE(sigma, n_process, naive):
+def CE(sigma, n_process):
     """
     Input:        
         sigma : covariance matrix, dim = (6600,6600)
         n_process : number of gaussian processes to fit
 
     Output:        
-        gauss_process : fitted gaussian processes, dim = (6600, n_process)
+        gauss_process : zero-mean gaussian processes, dim=(6600,n_process)
     """
     
-    if (naive):
-        U,D,_ = np.linalg.svd(sigma)
-        A = U@np.diag(np.sqrt(D))
-        Ny = sigma.shape[0]
-        gauss_process = A@np.random.standard_normal(size = (Ny,n_process))
+    P = build_P(sigma)
+    W = fft2(P)
+    gauss_process = np.zeros((6600, n_process))
     
-    else:       
-        # Following the algorithm
+    for i in range(n_process):
+        Xi = np.random.standard_normal(size=W.shape)
+        T = 2*np.sqrt(59*109*W)*Xi
+        Z = ifft2(T)
+        Z_prime = Z.real + Z.imag
         
-        # Build the matrix P
-        # We should also add the option of the padding to make W positive definite
-        P = build_P(sigma)
-        
-        # Calculate the 2D FFT of P
-        W = fft2(P)
-        # print(np.all(linalg.eigvals(np.conjugate(W).T.dot(W)) > 0))
-        
-        gauss_process = np.zeros((6600, n_process))
-        
-        for i in range(n_process):
-            
-            # Generate iid standard normal random variables and put them in Xi
-            Xi = np.random.standard_normal(size=W.shape)
-            
-            # Build T
-            T = np.sqrt(W)*Xi
-            
-            # Calculate the 2D iFFT of T
-            Z = ifft2(T)
-            
-            # Extract the real and imaginary part of Z and sum them
-            Z_prime = Z.real + Z.imag
-            
-            sample = (Z_prime[:60, :110]).T.flatten()            
-            gauss_process[:,i] = sample
+        sample = (Z_prime[:60, :110]).T.flatten()            
+        gauss_process[:,i] = sample
         
     return gauss_process
     
+# condition the zero-mean gaussian processes to the observations  
+def conditional(K_ZY, K_Z, K_Y, Points, Values, n_process):
+    """
+    Input:
+        K_ZY: mixed kernel of Z and Y, dim = (Nz,Ny)
+        K_Z: kernel of train points Z, dim = (Nz,Nz)
+        K_Y: kernel of test points Y, dim = (Ny,Ny)
+        Values : perm evaluated in Mesh, dim = (Nz,)
+        Points : array of points in Mesh, dim = (Nz,2)
+        n_process : number of processes to fit
     
-def conditional(mean_perm, cov_perm, K_ZY, K_Z, K_Y, Points, Values, n_process):
+    Output:
+        post : conditioned gaussian processes, dim = (6600, n_process)
+    """
+    
     index = 60*Points[:,0]+Points[:,1] #indexes of Z
-    precond = CE(K_Y, n_process, naive = False)
+    precond = CE(K_Y, n_process)
     z_iniz = precond[index]
     post = precond + K_ZY.T@np.linalg.solve(K_Z, Values.reshape(-1,1)-z_iniz)
-    
-    #print(np.mean(np.abs(np.diag(np.cov(precond)-cov_perm))))
-    #print(np.mean(np.abs(np.cov(post)-cov_perm))/np.mean(np.abs(cov_perm)))
     
     return post
 
