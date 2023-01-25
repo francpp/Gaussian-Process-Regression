@@ -24,3 +24,4 @@ The reference field given as a 110 × 60 `numpy array` object, can be found unde
 ## Documents
 - `Gaussian_process_regression.pdf`: the text of the project
 - `Stochastic_Simulation_Report.pdf`: the text of the report
+- `Stochastic_Simulation_Presentation.pdf`: the presentation of the project 
